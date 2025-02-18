@@ -159,34 +159,38 @@ int main(int argc, char * argv[])
 
   auto capture_client = create_capture_client(node);
   auto trigger_capture = [&]() {
-    RCLCPP_INFO(node->get_logger(), "Triggering capture");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Triggering capture");
     capture_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
   };
 
   auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
     "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
-      //RCLCPP_INFO(node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
+      RCLCPP_DEBUG_STREAM(
+        node->get_logger(), "Received point cloud of size %d x %d" + msg->width + msg->height);
       trigger_capture();
     });
 
   auto color_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(
-      "color/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
-        //RCLCPP_INFO(node->get_logger(), "Received image of size %d x %d", msg->width, msg->height);
-        trigger_capture();
-      });
+    "color/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
+      RCLCPP_DEBUG_STREAM(
+        node->get_logger(), "Received image of size %d x %d" + msg->width + msg->height);
+      trigger_capture();
+    });
 
   auto depth_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(
-        "depth/image", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
-          //RCLCPP_INFO(node->get_logger(), "Received image of size %d x %d", msg->width, msg->height);
-          trigger_capture();
-      });     
+    "depth/image", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
+      RCLCPP_DEBUG_STREAM(
+        node->get_logger(), "Received image of size %d x %d" + msg->width + msg->height);
+      trigger_capture();
+    });
 
   auto normals_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "normals/xyz", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
-          //RCLCPP_INFO(node->get_logger(), "Received normals of size %d x %d", msg->width, msg->height);
-          trigger_capture();
-        });
-        
+    "normals/xyz", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
+      RCLCPP_DEBUG_STREAM(
+        node->get_logger(), "Received normals of size %d x %d" + msg->width + msg->height);
+      trigger_capture();
+    });
+
   trigger_capture();
 
   RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");

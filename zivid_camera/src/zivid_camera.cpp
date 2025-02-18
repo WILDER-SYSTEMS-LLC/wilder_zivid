@@ -249,7 +249,7 @@ public:
 
   void setSettings(const SettingsType & settings)
   {
-    RCLCPP_INFO_STREAM(node_.get_logger(), "Setting settings from " << settings.name << " object");
+    RCLCPP_DEBUG_STREAM(node_.get_logger(), "Setting settings from " << settings.name << " object");
     node_.set_parameter(rclcpp::Parameter{yaml_string_param_, serializeZividDataModel(settings)});
     node_.set_parameter(rclcpp::Parameter{file_path_param_, ""});
   }
@@ -257,7 +257,7 @@ public:
 private:
   void parameterCallback(const rclcpp::Parameter & p)
   {
-    RCLCPP_INFO(
+    RCLCPP_DEBUG(
       node_.get_logger(), "Parameter '%s' was set to '%s'", p.get_name().c_str(),
       p.as_string().c_str());
   }
@@ -290,9 +290,9 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   // Disable buffering on stdout
   setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
-  RCLCPP_INFO_STREAM(get_logger(), "Zivid ROS driver");  // Fix: add version
-  RCLCPP_INFO(get_logger(), "The node's namespace is '%s'", get_namespace());
-  RCLCPP_INFO_STREAM(get_logger(), "Running Zivid Core version " << ZIVID_CORE_VERSION);
+  RCLCPP_DEBUG_STREAM(get_logger(), "Zivid ROS driver");  // Fix: add version
+  RCLCPP_DEBUG(get_logger(), "The node's namespace is '%s'", get_namespace());
+  RCLCPP_DEBUG_STREAM(get_logger(), "Running Zivid Core version " << ZIVID_CORE_VERSION);
 
   const auto serial_number = declare_parameter<std::string>(ParamNames::serial_number, "");
 
@@ -357,7 +357,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
 
   if (!Zivid::Firmware::isUpToDate(*camera_)) {
     if (update_firmware_automatically) {
-      RCLCPP_INFO(
+      RCLCPP_DEBUG_STREAM(
         get_logger(),
         "The camera firmware is not up-to-date, and update_firmware_automatically is true, "
         "starting update");
@@ -365,7 +365,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
         *camera_, [logger = get_logger()](double progress, const std::string & state) {
           RCLCPP_INFO(logger, "  [%.0f%%] %s", progress, state.c_str());
         });
-      RCLCPP_INFO(get_logger(), "Firmware update completed");
+      RCLCPP_DEBUG_STREAM(get_logger(), "Firmware update completed");
     } else {
       logErrorAndThrowRuntimeException(
         "The firmware on camera '" + camera_->info().serialNumber().value() +
@@ -374,7 +374,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
     }
   }
 
-  RCLCPP_INFO_STREAM(get_logger(), *camera_);
+  RCLCPP_DEBUG_STREAM(get_logger(), *camera_);
   if (!file_camera_mode) {
     RCLCPP_INFO_STREAM(
       get_logger(), "Connecting to camera '" << camera_->info().serialNumber() << "'");
@@ -388,7 +388,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
     this, get_clock(), std::chrono::seconds(10),
     std::bind(&ZividCamera::onCameraConnectionKeepAliveTimeout, this));
 
-  RCLCPP_INFO(get_logger(), "Advertising topics");
+  RCLCPP_DEBUG_STREAM(get_logger(), "Advertising topics");
 
   points_xyz_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>(
     "points/xyz", getQoSLatched(use_latched_publisher_for_points_xyz_));
@@ -408,7 +408,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   snr_image_publisher_ = image_transport::create_camera_publisher(
     this, "snr/image", getQoSLatched(use_latched_publisher_for_snr_image_).get_rmw_qos_profile());
 
-  RCLCPP_INFO(get_logger(), "Advertising services");
+  RCLCPP_DEBUG_STREAM(get_logger(), "Advertising services");
 
   using namespace std::placeholders;
 
@@ -451,7 +451,7 @@ void ZividCamera::onCameraConnectionKeepAliveTimeout()
   try {
     reconnectToCameraIfNecessary();
   } catch (const std::exception & e) {
-    RCLCPP_INFO(get_logger(), "%s failed with exception '%s'", __func__, e.what());
+    RCLCPP_DEBUG(get_logger(), "%s failed with exception '%s'", __func__, e.what());
   }
 }
 
@@ -487,7 +487,7 @@ void ZividCamera::setCameraStatus(CameraStatus camera_status)
     ss << "Camera status changed to " << toString(camera_status) << " (was "
        << toString(camera_status_) << ")";
     if (camera_status == CameraStatus::Connected) {
-      RCLCPP_INFO_STREAM(get_logger(), ss.str());
+      RCLCPP_DEBUG_STREAM(get_logger(), ss.str());
     } else {
       RCLCPP_WARN_STREAM(get_logger(), ss.str());
     }
@@ -500,7 +500,7 @@ void ZividCamera::cameraInfoModelNameServiceHandler(
   const std::shared_ptr<zivid_interfaces::srv::CameraInfoModelName::Request>,
   std::shared_ptr<zivid_interfaces::srv::CameraInfoModelName::Response> response)
 {
-  RCLCPP_INFO_STREAM(get_logger(), __func__);
+  RCLCPP_DEBUG_STREAM(get_logger(), __func__);
   response->model_name = camera_->info().modelName().toString();
 }
 
@@ -509,7 +509,7 @@ void ZividCamera::cameraInfoSerialNumberServiceHandler(
   const std::shared_ptr<zivid_interfaces::srv::CameraInfoSerialNumber::Request>,
   std::shared_ptr<zivid_interfaces::srv::CameraInfoSerialNumber::Response> response)
 {
-  RCLCPP_INFO_STREAM(get_logger(), __func__);
+  RCLCPP_DEBUG_STREAM(get_logger(), __func__);
   response->serial_number = camera_->info().serialNumber().toString();
 }
 
@@ -517,7 +517,7 @@ void ZividCamera::captureServiceHandler(
   const std::shared_ptr<rmw_request_id_t>, const std::shared_ptr<std_srvs::srv::Trigger::Request>,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
-  RCLCPP_INFO_STREAM(get_logger(), __func__);
+  RCLCPP_DEBUG_STREAM(get_logger(), __func__);
 
   const auto settings = runFunctionAndCatchExceptionsAndRethrow(
     [&] { return settings_controller_->currentSettings(); }, get_logger());
@@ -531,7 +531,7 @@ void ZividCamera::captureAndSaveServiceHandler(
   const std::shared_ptr<zivid_interfaces::srv::CaptureAndSave::Request> request,
   std::shared_ptr<zivid_interfaces::srv::CaptureAndSave::Response> response)
 {
-  RCLCPP_INFO_STREAM(get_logger(), __func__);
+  RCLCPP_DEBUG_STREAM(get_logger(), __func__);
   const auto settings = runFunctionAndCatchExceptionsAndRethrow(
     [&] { return settings_controller_->currentSettings(); }, get_logger());
 
@@ -539,7 +539,7 @@ void ZividCamera::captureAndSaveServiceHandler(
     [&]() {
       const auto frame = invokeCaptureAndPublishFrame(settings);
       const auto destination_path = request->file_path;
-      RCLCPP_INFO(get_logger(), "Saving frame to '%s'", destination_path.c_str());
+      RCLCPP_DEBUG(get_logger(), "Saving frame to '%s'", destination_path.c_str());
       frame.save(destination_path);
     },
     response, get_logger(), "CaptureAndSave");
@@ -549,7 +549,7 @@ void ZividCamera::capture2DServiceHandler(
   const std::shared_ptr<rmw_request_id_t>, const std::shared_ptr<std_srvs::srv::Trigger::Request>,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
-  RCLCPP_INFO_STREAM(get_logger(), __func__);
+  RCLCPP_DEBUG_STREAM(get_logger(), __func__);
 
   serviceHandlerHandleCameraConnectionLoss();
 
@@ -575,7 +575,7 @@ void ZividCamera::captureAssistantSuggestSettingsServiceHandler(
   const std::shared_ptr<zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request> request,
   std::shared_ptr<zivid_interfaces::srv::CaptureAssistantSuggestSettings::Response> response)
 {
-  RCLCPP_INFO_STREAM(get_logger(), __func__);
+  RCLCPP_DEBUG_STREAM(get_logger(), __func__);
 
   serviceHandlerHandleCameraConnectionLoss();
 
@@ -601,7 +601,7 @@ void ZividCamera::captureAssistantSuggestSettingsServiceHandler(
 
   SuggestSettingsParameters suggest_settings_parameters{
     SuggestSettingsParameters::MaxCaptureTime{max_capture_time}, ambient_light_frequency};
-  RCLCPP_INFO_STREAM(
+  RCLCPP_DEBUG_STREAM(
     get_logger(), "Getting suggested settings using parameters: " << suggest_settings_parameters);
   const auto suggested_settings = runFunctionAndCatchExceptionsAndRethrow(
     [&]() {
@@ -609,7 +609,7 @@ void ZividCamera::captureAssistantSuggestSettingsServiceHandler(
     },
     get_logger());
 
-  RCLCPP_INFO_STREAM(
+  RCLCPP_DEBUG_STREAM(
     get_logger(), "CaptureAssistant::suggestSettings returned "
                     << suggested_settings.acquisitions().size() << " acquisitions");
 
@@ -637,7 +637,7 @@ void ZividCamera::isConnectedServiceHandler(
 
 void ZividCamera::publishFrame(const Zivid::Frame & frame)
 {
-  RCLCPP_INFO_STREAM(get_logger(), __func__);
+  RCLCPP_DEBUG_STREAM(get_logger(), __func__);
   const bool publish_points_xyz = shouldPublishPointsXYZ();
   const bool publish_points_xyzrgba = shouldPublishPointsXYZRGBA();
   const bool publish_color_img = shouldPublishColorImg();
@@ -732,7 +732,7 @@ std_msgs::msg::Header ZividCamera::makeHeader()
 void ZividCamera::publishPointCloudXYZ(
   const std_msgs::msg::Header & header, const Zivid::PointCloud & point_cloud)
 {
-  RCLCPP_INFO_STREAM(get_logger(), "Publishing " << points_xyz_publisher_->get_topic_name());
+  RCLCPP_DEBUG_STREAM(get_logger(), "Publishing " << points_xyz_publisher_->get_topic_name());
 
   // We are using the Zivid::XYZW type here for compatibility with the pcl::PointXYZ type, which
   // contains a padding float for performance reasons. We could use the "pcl_conversion" utility
@@ -756,7 +756,7 @@ void ZividCamera::publishPointCloudXYZ(
 void ZividCamera::publishPointCloudXYZRGBA(
   const std_msgs::msg::Header & header, const Zivid::PointCloud & point_cloud)
 {
-  RCLCPP_INFO_STREAM(get_logger(), "Publishing " << points_xyzrgba_publisher_->get_topic_name());
+  RCLCPP_DEBUG_STREAM(get_logger(), "Publishing " << points_xyzrgba_publisher_->get_topic_name());
 
   auto msg = std::make_unique<sensor_msgs::msg::PointCloud2>();
   fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
@@ -782,7 +782,7 @@ void ZividCamera::publishColorImage(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
   const Zivid::PointCloud & point_cloud)
 {
-  RCLCPP_INFO_STREAM(
+  RCLCPP_DEBUG_STREAM(
     get_logger(), "Publishing " << color_image_publisher_.getTopic() << " from point cloud");
   auto image =
     makePointCloudImage<Zivid::ColorRGBA>(point_cloud, header, sensor_msgs::image_encodings::RGBA8);
@@ -794,7 +794,7 @@ void ZividCamera::publishColorImage(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
   const Zivid::Image<Zivid::ColorRGBA> & image)
 {
-  RCLCPP_INFO_STREAM(
+  RCLCPP_DEBUG_STREAM(
     get_logger(), "Publishing " << color_image_publisher_.getTopic() << " from Image");
   auto msg = makeImage(header, sensor_msgs::image_encodings::RGBA8, image.width(), image.height());
   const auto uint8_ptr_begin = reinterpret_cast<const uint8_t *>(image.data());
@@ -821,7 +821,7 @@ void ZividCamera::publishDepthImage(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
   const Zivid::PointCloud & point_cloud)
 {
-  RCLCPP_INFO_STREAM(get_logger(), "Publishing " << depth_image_publisher_.getTopic());
+  RCLCPP_DEBUG_STREAM(get_logger(), "Publishing " << depth_image_publisher_.getTopic());
   auto image = makePointCloudImage<Zivid::PointZ>(
     point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1);
   depth_image_publisher_.publish(image, camera_info);
@@ -832,7 +832,7 @@ void ZividCamera::publishSnrImage(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
   const Zivid::PointCloud & point_cloud)
 {
-  RCLCPP_INFO_STREAM(get_logger(), "Publishing " << snr_image_publisher_.getTopic());
+  RCLCPP_DEBUG_STREAM(get_logger(), "Publishing " << snr_image_publisher_.getTopic());
   auto image =
     makePointCloudImage<Zivid::SNR>(point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1);
   snr_image_publisher_.publish(image, camera_info);
@@ -841,7 +841,7 @@ void ZividCamera::publishSnrImage(
 void ZividCamera::publishNormalsXYZ(
   const std_msgs::msg::Header & header, const Zivid::PointCloud & point_cloud)
 {
-  RCLCPP_INFO_STREAM(get_logger(), "Publishing " << normals_xyz_publisher_->get_topic_name());
+  RCLCPP_DEBUG_STREAM(get_logger(), "Publishing " << normals_xyz_publisher_->get_topic_name());
 
   using ZividDataType = Zivid::NormalXYZ;
   auto msg = std::make_unique<sensor_msgs::msg::PointCloud2>();
@@ -908,11 +908,11 @@ sensor_msgs::msg::CameraInfo::ConstSharedPtr ZividCamera::makeCameraInfo(
 
 Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame(const Zivid::Settings & settings)
 {
-  RCLCPP_INFO_STREAM(get_logger(), __func__);
+  RCLCPP_DEBUG_STREAM(get_logger(), __func__);
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  RCLCPP_INFO(get_logger(), "Capturing with %zd acquisition(s)", settings.acquisitions().size());
+  RCLCPP_DEBUG(get_logger(), "Capturing with %zd acquisition(s)", settings.acquisitions().size());
   RCLCPP_DEBUG_STREAM(get_logger(), settings);
   const auto frame = camera_->capture(settings);
   publishFrame(frame);
