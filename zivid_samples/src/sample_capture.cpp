@@ -15,20 +15,107 @@ void set_settings(const std::shared_ptr<rclcpp::Node> & node)
   RCLCPP_INFO(node->get_logger(), "Setting parameter 'settings_yaml'");
   const std::string settings_yml =
     R"(
-__version__:
-  serializer: 1
-  data: 22
+__version__: 27
 Settings:
   Acquisitions:
     - Acquisition:
-        Aperture: 5.66
-        ExposureTime: 8333
+        Aperture: 4
+        Brightness: 2.5
+        ExposureTime: 2000
+        Gain: 1
+    - Acquisition:
+        Aperture: 4
+        Brightness: 2.5
+        ExposureTime: 20000
+        Gain: 1
+  Color:
+    __version__: 7
+    Settings2D:
+      Acquisitions:
+        - Acquisition:
+            Aperture: 4
+            Brightness: 2.5
+            ExposureTime: 4000
+            Gain: 1
+      Processing:
+        Color:
+          Balance:
+            Blue: 1
+            Green: 1
+            Red: 1
+          Experimental:
+            Mode: automatic
+          Gamma: 1
+      Sampling:
+        Color: rgb
+        Pixel: by4x4
+  Diagnostics:
+    Enabled: no
+  Engine: sage
   Processing:
+    Color:
+      Balance:
+        Blue: __not_set__
+        Green: __not_set__
+        Red: __not_set__
+      Experimental:
+        Mode: __not_set__
+      Gamma: __not_set__
     Filters:
+      Cluster:
+        Removal:
+          Enabled: yes
+          MaxNeighborDistance: 3.5
+          MinArea: 25
+      Experimental:
+        ContrastDistortion:
+          Correction:
+            Enabled: no
+            Strength: 0.2
+          Removal:
+            Enabled: yes
+            Threshold: 0.3
+      Hole:
+        Repair:
+          Enabled: yes
+          HoleSize: 0.1
+          Strictness: 4
+      Noise:
+        Removal:
+          Enabled: yes
+          Threshold: 7
+        Repair:
+          Enabled: yes
+        Suppression:
+          Enabled: no
       Outlier:
         Removal:
           Enabled: yes
           Threshold: 5
+      Reflection:
+        Removal:
+          Enabled: yes
+          Mode: global
+      Smoothing:
+        Gaussian:
+          Enabled: yes
+          Sigma: 1
+    Resampling:
+      Mode: disabled
+  RegionOfInterest:
+    Box:
+      Enabled: no
+      Extents: [-10, 100]
+      PointA: [0, 0, 0]
+      PointB: [0, 0, 0]
+      PointO: [0, 0, 0]
+    Depth:
+      Enabled: no
+      Range: [300, 1100]
+  Sampling:
+    Color: __not_set__
+    Pixel: by4x4
+
 )";
 
   auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
@@ -78,11 +165,28 @@ int main(int argc, char * argv[])
 
   auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
     "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
-      RCLCPP_INFO(
-        node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
+      //RCLCPP_INFO(node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
       trigger_capture();
     });
 
+  auto color_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(
+      "color/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
+        //RCLCPP_INFO(node->get_logger(), "Received image of size %d x %d", msg->width, msg->height);
+        trigger_capture();
+      });
+
+  auto depth_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(
+        "depth/image", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
+          //RCLCPP_INFO(node->get_logger(), "Received image of size %d x %d", msg->width, msg->height);
+          trigger_capture();
+      });     
+
+  auto normals_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
+        "normals/xyz", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
+          //RCLCPP_INFO(node->get_logger(), "Received normals of size %d x %d", msg->width, msg->height);
+          trigger_capture();
+        });
+        
   trigger_capture();
 
   RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");

@@ -1,6 +1,13 @@
 <launch>
   <arg name="sample" default=""/>
-  <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera" />
-  <node pkg="zivid_samples" exec="$(var sample)" name="$(var sample)" />
-  <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share zivid_camera)/config/rviz/zivid.rviz" />
+  <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera">
+    <remap from="/color/image_color" to="/sci_viz_image"/>
+    <remap from="/color/camera_info" to="/sci_viz_cam_info"/>
+    <remap from="/depth/image" to="/camera/camera/aligned_depth_to_color/image_raw"/>
+  </node>
+  <node pkg="zivid_samples" exec="$(var sample)" name="$(var sample)">
+    <remap from="/color/image_color" to="/sci_viz_image"/>
+    <remap from="/color/camera_info" to="/sci_viz_cam_info"/>
+    <remap from="/depth/image" to="/camera/camera/aligned_depth_to_color/image_raw"/>
+  </node>
 </launch>
