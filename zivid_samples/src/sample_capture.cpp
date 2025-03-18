@@ -19,24 +19,19 @@ __version__: 27
 Settings:
   Acquisitions:
     - Acquisition:
-        Aperture: 4
+        Aperture: 2.59
         Brightness: 2.5
         ExposureTime: 2000
-        Gain: 1
-    - Acquisition:
-        Aperture: 4
-        Brightness: 2.5
-        ExposureTime: 20000
-        Gain: 1
+        Gain: 2
   Color:
     __version__: 7
     Settings2D:
       Acquisitions:
         - Acquisition:
-            Aperture: 4
+            Aperture: 2.59
             Brightness: 2.5
-            ExposureTime: 4000
-            Gain: 1
+            ExposureTime: 1000
+            Gain: 2
       Processing:
         Color:
           Balance:
@@ -48,10 +43,10 @@ Settings:
           Gamma: 1
       Sampling:
         Color: rgb
-        Pixel: by4x4
+        Pixel: by2x2
   Diagnostics:
     Enabled: no
-  Engine: sage
+  Engine: omni
   Processing:
     Color:
       Balance:
@@ -65,33 +60,33 @@ Settings:
       Cluster:
         Removal:
           Enabled: yes
-          MaxNeighborDistance: 3.5
-          MinArea: 25
+          MaxNeighborDistance: 6
+          MinArea: 500
       Experimental:
         ContrastDistortion:
           Correction:
             Enabled: no
-            Strength: 0.2
+            Strength: 0
           Removal:
-            Enabled: yes
-            Threshold: 0.3
+            Enabled: no
+            Threshold: 0.4
       Hole:
         Repair:
           Enabled: yes
-          HoleSize: 0.1
-          Strictness: 4
+          HoleSize: 0.7
+          Strictness: 1
       Noise:
         Removal:
           Enabled: yes
-          Threshold: 7
+          Threshold: 2
         Repair:
           Enabled: yes
         Suppression:
-          Enabled: no
+          Enabled: yes
       Outlier:
         Removal:
           Enabled: yes
-          Threshold: 5
+          Threshold: 10
       Reflection:
         Removal:
           Enabled: yes
@@ -99,7 +94,7 @@ Settings:
       Smoothing:
         Gaussian:
           Enabled: yes
-          Sigma: 1
+          Sigma: 1.5
     Resampling:
       Mode: disabled
   RegionOfInterest:
@@ -114,8 +109,7 @@ Settings:
       Range: [300, 1100]
   Sampling:
     Color: __not_set__
-    Pixel: by4x4
-
+    Pixel: by2x2
 )";
 
   auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
