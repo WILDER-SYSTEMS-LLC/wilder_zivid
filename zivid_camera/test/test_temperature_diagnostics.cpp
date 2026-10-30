@@ -34,6 +34,7 @@
 
 using diagnostic_msgs::msg::DiagnosticStatus;
 using Temperature = Zivid::CameraState::Temperature;
+using zivid_camera::TemperatureDiagnostics;
 
 namespace
 {
@@ -44,6 +45,13 @@ Zivid::CameraState connectedCamera(double led, double dmd)
     Temperature{
       Temperature::DMD{dmd}, Temperature::General{35.04}, Temperature::LED{led},
       Temperature::Lens{38.46}, Temperature::PCB{41.27}}};
+}
+
+Zivid::CameraState disconnectedCamera()
+{
+  return Zivid::CameraState{
+    Zivid::CameraState::Connected{false},
+    Temperature{Temperature::DMD{80.0}, Temperature::LED{80.0}}};
 }
 
 std::string valueOf(const DiagnosticStatus & status, const std::string & key)
@@ -57,79 +65,127 @@ std::string valueOf(const DiagnosticStatus & status, const std::string & key)
 }
 }  // namespace
 
-TEST(TemperatureDiagnosticsTest, testTemperaturesWithinZividsLimitsAreOk)
+TEST(TemperatureDiagnosticsTest, testMessageGivesTheReadingsAndTheirLimits)
 {
-  const auto status = zivid_camera::temperatureDiagnosticStatus(connectedCamera(45.0, 38.0), "SN1");
+  TemperatureDiagnostics diagnostics;
+
+  const auto status = diagnostics.status(connectedCamera(45.2, 37.8), "SN1");
 
   EXPECT_EQ(status.name, "zivid_temperature");
   EXPECT_EQ(status.level, DiagnosticStatus::OK);
-  EXPECT_EQ(status.message, "Zivid temperatures within Zivid's limits");
+  EXPECT_EQ(status.message, "LED 45 °C (limit 70 °C), DMD 38 °C (limit 60 °C)");
   EXPECT_EQ(status.hardware_id, "SN1");
+}
+
+TEST(TemperatureDiagnosticsTest, testValuesGiveEveryReadingAndTheLimits)
+{
+  TemperatureDiagnostics diagnostics;
+
+  const auto status = diagnostics.status(connectedCamera(45.0, 38.0), "SN1");
+
   EXPECT_EQ(valueOf(status, "dmd_c"), "38.0");
   EXPECT_EQ(valueOf(status, "led_c"), "45.0");
   EXPECT_EQ(valueOf(status, "lens_c"), "38.5");
   EXPECT_EQ(valueOf(status, "pcb_c"), "41.3");
   EXPECT_EQ(valueOf(status, "general_c"), "35.0");
+  EXPECT_EQ(valueOf(status, "led_limit_c"), "70");
+  EXPECT_EQ(valueOf(status, "dmd_limit_c"), "60");
 }
 
-TEST(TemperatureDiagnosticsTest, testTemperaturesAtZividsLimitsAreOk)
+TEST(TemperatureDiagnosticsTest, testReadingsAtZividsLimitsAreOk)
 {
-  const auto status = zivid_camera::temperatureDiagnosticStatus(connectedCamera(70.0, 60.0), "SN1");
+  TemperatureDiagnostics diagnostics;
+
+  const auto status = diagnostics.status(connectedCamera(70.0, 60.0), "SN1");
 
   EXPECT_EQ(status.level, DiagnosticStatus::OK);
+  EXPECT_EQ(status.message, "LED 70 °C (limit 70 °C), DMD 60 °C (limit 60 °C)");
 }
 
-TEST(TemperatureDiagnosticsTest, testLedAboveZividsLimitIsAnError)
+TEST(TemperatureDiagnosticsTest, testLedOverItsLimitIsAnError)
 {
-  const auto status = zivid_camera::temperatureDiagnosticStatus(connectedCamera(70.4, 50.0), "SN1");
+  TemperatureDiagnostics diagnostics;
 
-  EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
-  EXPECT_EQ(status.message, "Zivid LED above 70 °C; the camera rejects captures");
-  EXPECT_EQ(valueOf(status, "led_c"), "70.4");
-}
-
-TEST(TemperatureDiagnosticsTest, testDmdAboveZividsLimitIsAnError)
-{
-  const auto status = zivid_camera::temperatureDiagnosticStatus(connectedCamera(50.0, 61.0), "SN1");
-
-  EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
-  EXPECT_EQ(status.message, "Zivid DMD above 60 °C; the camera rejects captures");
-}
-
-TEST(TemperatureDiagnosticsTest, testBothAboveZividsLimitsIsOneError)
-{
-  const auto status = zivid_camera::temperatureDiagnosticStatus(connectedCamera(75.0, 65.0), "SN1");
+  const auto status = diagnostics.status(connectedCamera(70.4, 50.0), "SN1");
 
   EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
   EXPECT_EQ(
-    status.message, "Zivid LED above 70 °C and DMD above 60 °C; the camera rejects captures");
+    status.message,
+    "LED 70.4 °C (limit 70 °C), DMD 50 °C (limit 60 °C); LED over its limit: the camera rejects "
+    "captures");
 }
 
-TEST(TemperatureDiagnosticsTest, testMessageDoesNotChangeWithTheTemperatures)
+TEST(TemperatureDiagnosticsTest, testDmdOverItsLimitIsAnError)
 {
-  // The diagnostics recorder stores a status only when its level or message changes.
-  const auto cooler = zivid_camera::temperatureDiagnosticStatus(connectedCamera(40.0, 35.0), "");
-  const auto warmer = zivid_camera::temperatureDiagnosticStatus(connectedCamera(55.5, 48.2), "");
+  TemperatureDiagnostics diagnostics;
 
-  EXPECT_EQ(cooler.message, warmer.message);
+  const auto status = diagnostics.status(connectedCamera(50.0, 61.0), "SN1");
+
+  EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
+  EXPECT_EQ(
+    status.message,
+    "LED 50 °C (limit 70 °C), DMD 61.0 °C (limit 60 °C); DMD over its limit: the camera rejects "
+    "captures");
+}
+
+TEST(TemperatureDiagnosticsTest, testBothOverTheirLimitsIsOneError)
+{
+  TemperatureDiagnostics diagnostics;
+
+  const auto status = diagnostics.status(connectedCamera(75.0, 65.0), "SN1");
+
+  EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
+  EXPECT_EQ(
+    status.message,
+    "LED 75.0 °C (limit 70 °C), DMD 65.0 °C (limit 60 °C); LED and DMD over their limits: the "
+    "camera rejects captures");
+}
+
+TEST(TemperatureDiagnosticsTest, testMessageKeepsAReadingUntilItMovesAFullDegree)
+{
+  // The robot's diagnostics recorder stores a status each time its message changes.
+  TemperatureDiagnostics diagnostics;
+  EXPECT_EQ(
+    diagnostics.status(connectedCamera(45.4, 38.0), "").message,
+    "LED 45 °C (limit 70 °C), DMD 38 °C (limit 60 °C)");
+
+  EXPECT_EQ(
+    diagnostics.status(connectedCamera(45.6, 38.4), "").message,
+    "LED 45 °C (limit 70 °C), DMD 38 °C (limit 60 °C)");
+  EXPECT_EQ(
+    diagnostics.status(connectedCamera(44.5, 37.6), "").message,
+    "LED 45 °C (limit 70 °C), DMD 38 °C (limit 60 °C)");
+
+  EXPECT_EQ(
+    diagnostics.status(connectedCamera(46.1, 38.0), "").message,
+    "LED 46 °C (limit 70 °C), DMD 38 °C (limit 60 °C)");
 }
 
 TEST(TemperatureDiagnosticsTest, testDisconnectedCameraIsStaleWithoutTemperatures)
 {
-  const auto state = Zivid::CameraState{
-    Zivid::CameraState::Connected{false},
-    Temperature{Temperature::DMD{80.0}, Temperature::LED{80.0}}};
+  TemperatureDiagnostics diagnostics;
 
-  const auto status = zivid_camera::temperatureDiagnosticStatus(state, "SN1");
+  const auto status = diagnostics.status(disconnectedCamera(), "SN1");
 
   EXPECT_EQ(status.level, DiagnosticStatus::STALE);
   EXPECT_EQ(status.message, "Zivid not connected");
   EXPECT_TRUE(status.values.empty());
 }
 
+TEST(TemperatureDiagnosticsTest, testReconnectedCameraShowsItsReadingsAfresh)
+{
+  TemperatureDiagnostics diagnostics;
+  diagnostics.status(connectedCamera(45.0, 38.0), "");
+  diagnostics.status(disconnectedCamera(), "");
+
+  EXPECT_EQ(
+    diagnostics.status(connectedCamera(45.6, 38.0), "").message,
+    "LED 46 °C (limit 70 °C), DMD 38 °C (limit 60 °C)");
+}
+
 TEST(TemperatureDiagnosticsTest, testUnreadableStateIsStale)
 {
-  const auto status = zivid_camera::unreadableTemperatureDiagnosticStatus("SN1");
+  const auto status = TemperatureDiagnostics::unreadable("SN1");
 
   EXPECT_EQ(status.name, "zivid_temperature");
   EXPECT_EQ(status.level, DiagnosticStatus::STALE);

@@ -492,11 +492,11 @@ void ZividCamera::publishTemperatureDiagnostics()
   diagnostic_msgs::msg::DiagnosticArray message;
   message.header.stamp = now();
   try {
-    message.status.push_back(temperatureDiagnosticStatus(camera_->state(), hardware_id));
+    message.status.push_back(temperature_diagnostics_.status(camera_->state(), hardware_id));
   } catch (const std::exception & e) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 60000, "Could not read the camera's temperatures: %s", e.what());
-    message.status.push_back(unreadableTemperatureDiagnosticStatus(hardware_id));
+    message.status.push_back(TemperatureDiagnostics::unreadable(hardware_id));
   }
   diagnostics_publisher_->publish(message);
 }

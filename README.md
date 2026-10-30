@@ -606,14 +606,19 @@ publishes a `zivid_temperature` status for the camera, with its serial number as
 It is published with transient local durability and is not published for a file camera.
 
 - The values are the camera's DMD, LED, lens, PCB and general temperatures in degrees Celsius
-  (`dmd_c`, `led_c`, `lens_c`, `pcb_c`, `general_c`). These are internal component
-  temperatures, not the ambient temperature.
-- ERROR when the LED is above 70 °C or the DMD is above 60 °C. These are Zivid's limits: above
-  them the camera's firmware rejects captures. See
+  (`dmd_c`, `led_c`, `lens_c`, `pcb_c`, `general_c`), and the LED and DMD limits
+  (`led_limit_c`, `dmd_limit_c`). These are internal component temperatures, not the ambient
+  temperature.
+- The message gives the LED and DMD readings with their limits, e.g.
+  `LED 45 °C (limit 70 °C), DMD 38 °C (limit 60 °C)`.
+- ERROR when the LED is above 70 °C or the DMD is above 60 °C, e.g.
+  `LED 70.4 °C (limit 70 °C), DMD 50 °C (limit 60 °C); LED over its limit: the camera rejects captures`.
+  These are Zivid's limits: above them the camera's firmware rejects captures. See
   [Monitoring Camera Temperature](https://support.zivid.com/en/latest/camera/reference-articles/monitoring-camera-temperature.html).
 - STALE while the camera is not connected, or when its state can't be read.
-- The message changes only when the level does, so a recorder that stores changes doesn't
-  store every temperature change.
+- The message gives whole degrees, and a reading in it changes only once the camera's reading is
+  a full degree away from it. A recorder that stores each message change, such as Wilder's
+  diagnostics recorder, then stores a row per degree, not per 0.1 °C.
 
 ## Samples
 

@@ -28,11 +28,12 @@
 
 #include <Zivid/CameraState.h>
 
+#include <cmath>
 #include <cstdint>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <string>
-#include <vector>
 #include <zivid_camera/temperature_diagnostics.hpp>
 
 namespace zivid_camera
@@ -66,52 +67,68 @@ diagnostic_msgs::msg::DiagnosticStatus makeStatus(
   status.hardware_id = hardware_id;
   return status;
 }
+
+// The whole degree the message shows for a reading. It moves only once the reading is a full
+// degree away from it, so a reading that wobbles around half a degree doesn't change the message.
+double shownDegrees(std::optional<double> & shown, double reading)
+{
+  if (!shown || std::abs(reading - *shown) >= 1.0) {
+    shown = std::round(reading);
+  }
+  return *shown;
+}
+
+// "LED 45 °C (limit 70 °C)". A reading over its limit is given to 0.1 °C, so it never reads as
+// equal to the limit.
+std::string reading(const std::string & name, double shown, double value, double limit)
+{
+  const auto degrees = value > limit ? formatDegrees(value, 1) : formatDegrees(shown, 0);
+  return name + " " + degrees + " °C (limit " + formatDegrees(limit, 0) + " °C)";
+}
 }  // namespace
 
-diagnostic_msgs::msg::DiagnosticStatus temperatureDiagnosticStatus(
+diagnostic_msgs::msg::DiagnosticStatus TemperatureDiagnostics::status(
   const Zivid::CameraState & state, const std::string & hardware_id)
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
 
   if (!state.isConnected().value()) {
+    shown_led_.reset();
+    shown_dmd_.reset();
     return makeStatus(DiagnosticStatus::STALE, "Zivid not connected", hardware_id);
   }
 
   const auto & temperature = state.temperature();
   const double led = temperature.led().value();
   const double dmd = temperature.dmd().value();
+  const bool led_over = led > led_temperature_limit_celsius;
+  const bool dmd_over = dmd > dmd_temperature_limit_celsius;
 
-  // The message names only the limits that are exceeded, so it changes only when the level does.
-  std::vector<std::string> over_limit;
-  if (led > led_temperature_limit_celsius) {
-    over_limit.push_back("LED above " + formatDegrees(led_temperature_limit_celsius, 0) + " °C");
-  }
-  if (dmd > dmd_temperature_limit_celsius) {
-    over_limit.push_back("DMD above " + formatDegrees(dmd_temperature_limit_celsius, 0) + " °C");
-  }
-
-  auto status =
-    makeStatus(DiagnosticStatus::OK, "Zivid temperatures within Zivid's limits", hardware_id);
-  if (!over_limit.empty()) {
-    std::string message = "Zivid " + over_limit.front();
-    if (over_limit.size() > 1) {
-      message += " and " + over_limit.back();
-    }
-    status =
-      makeStatus(DiagnosticStatus::ERROR, message + "; the camera rejects captures", hardware_id);
+  std::string message =
+    reading("LED", shownDegrees(shown_led_, led), led, led_temperature_limit_celsius) + ", " +
+    reading("DMD", shownDegrees(shown_dmd_, dmd), dmd, dmd_temperature_limit_celsius);
+  if (led_over && dmd_over) {
+    message += "; LED and DMD over their limits: the camera rejects captures";
+  } else if (led_over || dmd_over) {
+    message += std::string{"; "} + (led_over ? "LED" : "DMD") +
+               " over its limit: the camera rejects captures";
   }
 
+  auto status = makeStatus(
+    led_over || dmd_over ? DiagnosticStatus::ERROR : DiagnosticStatus::OK, message, hardware_id);
   status.values = {
     keyValue("dmd_c", formatDegrees(dmd, 1)),
     keyValue("led_c", formatDegrees(led, 1)),
     keyValue("lens_c", formatDegrees(temperature.lens().value(), 1)),
     keyValue("pcb_c", formatDegrees(temperature.pcb().value(), 1)),
     keyValue("general_c", formatDegrees(temperature.general().value(), 1)),
+    keyValue("led_limit_c", formatDegrees(led_temperature_limit_celsius, 0)),
+    keyValue("dmd_limit_c", formatDegrees(dmd_temperature_limit_celsius, 0)),
   };
   return status;
 }
 
-diagnostic_msgs::msg::DiagnosticStatus unreadableTemperatureDiagnosticStatus(
+diagnostic_msgs::msg::DiagnosticStatus TemperatureDiagnostics::unreadable(
   const std::string & hardware_id)
 {
   return makeStatus(

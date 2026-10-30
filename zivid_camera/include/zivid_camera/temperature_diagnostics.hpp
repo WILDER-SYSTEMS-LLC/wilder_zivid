@@ -29,6 +29,7 @@
 #pragma once
 
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <optional>
 #include <string>
 
 namespace Zivid
@@ -44,13 +45,26 @@ namespace zivid_camera
 constexpr double led_temperature_limit_celsius = 70.0;
 constexpr double dmd_temperature_limit_celsius = 60.0;
 
-// The `zivid_temperature` status for /diagnostics: the camera's temperatures in degrees Celsius,
-// ERROR above Zivid's limits, and STALE while the camera isn't connected.
-diagnostic_msgs::msg::DiagnosticStatus temperatureDiagnosticStatus(
-  const Zivid::CameraState & state, const std::string & hardware_id);
+// Builds the `zivid_temperature` status for /diagnostics: the camera's temperatures in degrees
+// Celsius, ERROR above Zivid's limits, and STALE while the camera isn't connected.
+//
+// The message gives the LED and DMD readings with their limits, e.g.
+// "LED 45 °C (limit 70 °C), DMD 38 °C (limit 60 °C)". The robot's diagnostics recorder stores a
+// status each time its message changes, so the message gives whole degrees, and a reading it shows
+// changes only once the camera's reading is a full degree away from it. The values carry every
+// reading to 0.1 °C.
+class TemperatureDiagnostics
+{
+public:
+  diagnostic_msgs::msg::DiagnosticStatus status(
+    const Zivid::CameraState & state, const std::string & hardware_id);
 
-// The `zivid_temperature` status when the camera's state can't be read.
-diagnostic_msgs::msg::DiagnosticStatus unreadableTemperatureDiagnosticStatus(
-  const std::string & hardware_id);
+  // The status when the camera's state can't be read.
+  static diagnostic_msgs::msg::DiagnosticStatus unreadable(const std::string & hardware_id);
+
+private:
+  std::optional<double> shown_led_;
+  std::optional<double> shown_dmd_;
+};
 
 }  // namespace zivid_camera
