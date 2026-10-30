@@ -51,6 +51,7 @@
 #include <zivid_camera/hand_eye_calibration_controller.hpp>
 #include <zivid_camera/infield_correction_controller.hpp>
 #include <zivid_camera/projection_controller.hpp>
+#include <zivid_camera/temperature_diagnostics.hpp>
 #include <zivid_camera/utility.hpp>
 #include <zivid_camera/zivid_camera.hpp>
 
@@ -387,6 +388,14 @@ ZividCamera::ZividCamera(
   snr_image_publisher_ = image_transport::create_camera_publisher(
     this, "snr/image", getQoSLatched(use_latched_publisher_for_snr_image_).get_rmw_qos_profile());
 
+  if (!file_camera_mode) {
+    // Transient local, like the robot's other /diagnostics publishers: the diagnostics recorder
+    // and the control panel subscribe with transient local durability, which a volatile
+    // publisher can't serve.
+    diagnostics_publisher_ = create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
+      "/diagnostics", rclcpp::QoS{10}.transient_local());
+  }
+
   RCLCPP_INFO(get_logger(), "Advertising services");
 
   using namespace std::placeholders;
@@ -446,6 +455,7 @@ void ZividCamera::onCameraConnectionKeepAliveTimeout()
   } catch (const std::exception & e) {
     RCLCPP_INFO(get_logger(), "%s failed with exception '%s'", __func__, e.what());
   }
+  publishTemperatureDiagnostics();
 }
 
 void ZividCamera::reconnectToCameraIfNecessary()
@@ -471,6 +481,24 @@ void ZividCamera::reconnectToCameraIfNecessary()
         "The camera '" << camera_->info().serialNumber() << "' is not connected nor available.");
     }
   }
+}
+
+void ZividCamera::publishTemperatureDiagnostics()
+{
+  if (!diagnostics_publisher_) {
+    return;
+  }
+  const auto hardware_id = camera_->info().serialNumber().value();
+  diagnostic_msgs::msg::DiagnosticArray message;
+  message.header.stamp = now();
+  try {
+    message.status.push_back(temperatureDiagnosticStatus(camera_->state(), hardware_id));
+  } catch (const std::exception & e) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 60000, "Could not read the camera's temperatures: %s", e.what());
+    message.status.push_back(unreadableTemperatureDiagnosticStatus(hardware_id));
+  }
+  diagnostics_publisher_->publish(message);
 }
 
 void ZividCamera::setCameraStatus(CameraStatus camera_status)
