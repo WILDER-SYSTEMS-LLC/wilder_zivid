@@ -602,7 +602,9 @@ will cause some additional processing time for calculating the normals.
 [diagnostic_msgs/msg/DiagnosticArray](https://docs.ros2.org/latest/api/diagnostic_msgs/msg/DiagnosticArray.html)
 
 Added in Wilder Systems' fork. Every 10 seconds, with the camera connection check, the driver
-publishes a `zivid_temperature` status for the camera, with its serial number as `hardware_id`.
+publishes a `zivid/temperature` status for the camera, with `hardware_id` `zivid`: the camera's
+device id on the robot, as in phoenix_diagnostics' `zivid/link` status (see "Naming" in
+phoenix_diagnostics' README). The camera's serial number is the `serial_number` value.
 It is published with transient local durability and is not published for a file camera.
 
 - The values are the camera's DMD, LED, lens, PCB and general temperatures in degrees Celsius

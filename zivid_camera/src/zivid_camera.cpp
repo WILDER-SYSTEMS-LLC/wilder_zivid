@@ -488,15 +488,15 @@ void ZividCamera::publishTemperatureDiagnostics()
   if (!diagnostics_publisher_) {
     return;
   }
-  const auto hardware_id = camera_->info().serialNumber().value();
+  const auto serial_number = camera_->info().serialNumber().value();
   diagnostic_msgs::msg::DiagnosticArray message;
   message.header.stamp = now();
   try {
-    message.status.push_back(temperature_diagnostics_.status(camera_->state(), hardware_id));
+    message.status.push_back(temperature_diagnostics_.status(camera_->state(), serial_number));
   } catch (const std::exception & e) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 60000, "Could not read the camera's temperatures: %s", e.what());
-    message.status.push_back(TemperatureDiagnostics::unreadable(hardware_id));
+    message.status.push_back(TemperatureDiagnostics::unreadable(serial_number));
   }
   diagnostics_publisher_->publish(message);
 }

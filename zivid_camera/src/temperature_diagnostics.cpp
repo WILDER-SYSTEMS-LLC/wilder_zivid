@@ -34,14 +34,13 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <zivid_camera/temperature_diagnostics.hpp>
 
 namespace zivid_camera
 {
 namespace
 {
-constexpr auto status_name = "zivid_temperature";
-
 std::string formatDegrees(double value, int precision)
 {
   std::ostringstream stream;
@@ -58,13 +57,14 @@ diagnostic_msgs::msg::KeyValue keyValue(const std::string & key, const std::stri
 }
 
 diagnostic_msgs::msg::DiagnosticStatus makeStatus(
-  uint8_t level, const std::string & message, const std::string & hardware_id)
+  uint8_t level, const std::string & message, const std::string & serial_number)
 {
   diagnostic_msgs::msg::DiagnosticStatus status;
-  status.name = status_name;
+  status.name = std::string{diagnostics_device_id} + "/temperature";
   status.level = level;
   status.message = message;
-  status.hardware_id = hardware_id;
+  status.hardware_id = diagnostics_device_id;
+  status.values = {keyValue("serial_number", serial_number)};
   return status;
 }
 
@@ -88,14 +88,14 @@ std::string reading(const std::string & name, double shown, double value, double
 }  // namespace
 
 diagnostic_msgs::msg::DiagnosticStatus TemperatureDiagnostics::status(
-  const Zivid::CameraState & state, const std::string & hardware_id)
+  const Zivid::CameraState & state, const std::string & serial_number)
 {
   using diagnostic_msgs::msg::DiagnosticStatus;
 
   if (!state.isConnected().value()) {
     shown_led_.reset();
     shown_dmd_.reset();
-    return makeStatus(DiagnosticStatus::STALE, "Zivid not connected", hardware_id);
+    return makeStatus(DiagnosticStatus::STALE, "Zivid not connected", serial_number);
   }
 
   const auto & temperature = state.temperature();
@@ -115,8 +115,8 @@ diagnostic_msgs::msg::DiagnosticStatus TemperatureDiagnostics::status(
   }
 
   auto status = makeStatus(
-    led_over || dmd_over ? DiagnosticStatus::ERROR : DiagnosticStatus::OK, message, hardware_id);
-  status.values = {
+    led_over || dmd_over ? DiagnosticStatus::ERROR : DiagnosticStatus::OK, message, serial_number);
+  const std::vector<diagnostic_msgs::msg::KeyValue> readings = {
     keyValue("dmd_c", formatDegrees(dmd, 1)),
     keyValue("led_c", formatDegrees(led, 1)),
     keyValue("lens_c", formatDegrees(temperature.lens().value(), 1)),
@@ -125,15 +125,16 @@ diagnostic_msgs::msg::DiagnosticStatus TemperatureDiagnostics::status(
     keyValue("led_limit_c", formatDegrees(led_temperature_limit_celsius, 0)),
     keyValue("dmd_limit_c", formatDegrees(dmd_temperature_limit_celsius, 0)),
   };
+  status.values.insert(status.values.end(), readings.begin(), readings.end());
   return status;
 }
 
 diagnostic_msgs::msg::DiagnosticStatus TemperatureDiagnostics::unreadable(
-  const std::string & hardware_id)
+  const std::string & serial_number)
 {
   return makeStatus(
     diagnostic_msgs::msg::DiagnosticStatus::STALE, "Could not read the Zivid's temperatures",
-    hardware_id);
+    serial_number);
 }
 
 }  // namespace zivid_camera

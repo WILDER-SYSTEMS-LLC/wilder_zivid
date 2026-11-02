@@ -45,7 +45,12 @@ namespace zivid_camera
 constexpr double led_temperature_limit_celsius = 70.0;
 constexpr double dmd_temperature_limit_celsius = 60.0;
 
-// Builds the `zivid_temperature` status for /diagnostics: the camera's temperatures in degrees
+// The camera's device id on /diagnostics: the status's hardware_id, and the first part of its name,
+// `zivid/temperature`. phoenix_diagnostics' `zivid/link` uses the same id (see "Naming" in its
+// README). The camera's serial number is in the values.
+constexpr auto diagnostics_device_id = "zivid";
+
+// Builds the `zivid/temperature` status for /diagnostics: the camera's temperatures in degrees
 // Celsius, ERROR above Zivid's limits, and STALE while the camera isn't connected.
 //
 // The message gives the LED and DMD readings with their limits, e.g.
@@ -57,10 +62,10 @@ class TemperatureDiagnostics
 {
 public:
   diagnostic_msgs::msg::DiagnosticStatus status(
-    const Zivid::CameraState & state, const std::string & hardware_id);
+    const Zivid::CameraState & state, const std::string & serial_number);
 
   // The status when the camera's state can't be read.
-  static diagnostic_msgs::msg::DiagnosticStatus unreadable(const std::string & hardware_id);
+  static diagnostic_msgs::msg::DiagnosticStatus unreadable(const std::string & serial_number);
 
 private:
   std::optional<double> shown_led_;

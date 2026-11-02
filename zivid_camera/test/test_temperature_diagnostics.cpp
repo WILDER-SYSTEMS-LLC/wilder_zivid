@@ -71,10 +71,12 @@ TEST(TemperatureDiagnosticsTest, testMessageGivesTheReadingsAndTheirLimits)
 
   const auto status = diagnostics.status(connectedCamera(45.2, 37.8), "SN1");
 
-  EXPECT_EQ(status.name, "zivid_temperature");
+  EXPECT_EQ(status.name, "zivid/temperature");
   EXPECT_EQ(status.level, DiagnosticStatus::OK);
   EXPECT_EQ(status.message, "LED 45 °C (limit 70 °C), DMD 38 °C (limit 60 °C)");
-  EXPECT_EQ(status.hardware_id, "SN1");
+  // The camera's device id, the same on every robot; the unit's serial number is a value.
+  EXPECT_EQ(status.hardware_id, "zivid");
+  EXPECT_EQ(valueOf(status, "serial_number"), "SN1");
 }
 
 TEST(TemperatureDiagnosticsTest, testValuesGiveEveryReadingAndTheLimits)
@@ -169,7 +171,8 @@ TEST(TemperatureDiagnosticsTest, testDisconnectedCameraIsStaleWithoutTemperature
 
   EXPECT_EQ(status.level, DiagnosticStatus::STALE);
   EXPECT_EQ(status.message, "Zivid not connected");
-  EXPECT_TRUE(status.values.empty());
+  EXPECT_EQ(status.values.size(), 1u);
+  EXPECT_EQ(valueOf(status, "serial_number"), "SN1");
 }
 
 TEST(TemperatureDiagnosticsTest, testReconnectedCameraShowsItsReadingsAfresh)
@@ -187,8 +190,9 @@ TEST(TemperatureDiagnosticsTest, testUnreadableStateIsStale)
 {
   const auto status = TemperatureDiagnostics::unreadable("SN1");
 
-  EXPECT_EQ(status.name, "zivid_temperature");
+  EXPECT_EQ(status.name, "zivid/temperature");
   EXPECT_EQ(status.level, DiagnosticStatus::STALE);
   EXPECT_EQ(status.message, "Could not read the Zivid's temperatures");
-  EXPECT_EQ(status.hardware_id, "SN1");
+  EXPECT_EQ(status.hardware_id, "zivid");
+  EXPECT_EQ(valueOf(status, "serial_number"), "SN1");
 }
