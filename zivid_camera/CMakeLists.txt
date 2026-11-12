@@ -21,6 +21,7 @@ endfunction()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -43,6 +44,7 @@ add_library(
   src/infield_correction_controller.cpp
   src/detector_controller.cpp
   src/projection_controller.cpp
+  src/temperature_diagnostics.cpp
   src/utility.cpp
   src/zivid_camera.cpp
 )
@@ -62,6 +64,7 @@ rclcpp_components_register_node(${ZIVID_DRIVER_COMPONENT_NAME}
 target_link_libraries(${ZIVID_DRIVER_COMPONENT_NAME} Zivid::Core)
 set(ZIVID_DRIVER_DEPENDENCIES
     rclcpp_components
+    diagnostic_msgs
     std_msgs
     std_srvs
     sensor_msgs
@@ -126,6 +129,12 @@ if(BUILD_TESTING)
   )
   target_include_directories(${TEST_TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/include)
   target_link_libraries(${TEST_TARGET_NAME} Zivid::Core ${ZIVID_DRIVER_COMPONENT_NAME})
+
+  # Needs no camera, so it runs on any computer with the Zivid SDK.
+  set(TEMPERATURE_TEST_TARGET_NAME ${PROJECT_NAME}_temperature_diagnostics_test)
+  ament_add_gtest(${TEMPERATURE_TEST_TARGET_NAME} test/test_temperature_diagnostics.cpp)
+  ament_target_dependencies(${TEMPERATURE_TEST_TARGET_NAME} diagnostic_msgs)
+  target_link_libraries(${TEMPERATURE_TEST_TARGET_NAME} Zivid::Core ${ZIVID_DRIVER_COMPONENT_NAME})
 
 endif()
 

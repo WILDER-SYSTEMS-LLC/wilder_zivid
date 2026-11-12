@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <image_transport/image_transport.hpp>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
@@ -35,6 +36,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <string>
+#include <zivid_camera/temperature_diagnostics.hpp>
 #include <zivid_camera/visibility.hpp>
 #include <zivid_interfaces/srv/camera_info_model_name.hpp>
 #include <zivid_interfaces/srv/camera_info_serial_number.hpp>
@@ -98,6 +100,7 @@ public:
 private:
   void onCameraConnectionKeepAliveTimeout();
   void reconnectToCameraIfNecessary();
+  void publishTemperatureDiagnostics();
   void setCameraStatus(CameraStatus camera_status);
   rcl_interfaces::msg::SetParametersResult setParametersCallback(
     const std::vector<rclcpp::Parameter> & parameters);
@@ -193,6 +196,9 @@ private:
   image_transport::CameraPublisher depth_image_publisher_;
   image_transport::CameraPublisher snr_image_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr normals_xyz_publisher_;
+  // Not created for a file camera, which has no temperatures.
+  rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_publisher_;
+  TemperatureDiagnostics temperature_diagnostics_;
   rclcpp::Service<zivid_interfaces::srv::CameraInfoSerialNumber>::SharedPtr
     camera_info_serial_number_service_;
   rclcpp::Service<zivid_interfaces::srv::CameraInfoModelName>::SharedPtr

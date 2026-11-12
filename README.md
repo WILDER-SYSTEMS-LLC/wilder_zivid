@@ -598,6 +598,30 @@ Each coordinate is a float value. There are no additional padding floats, so poi
 12 bytes (3*4 bytes). The normals are unit vectors. Note that subscribing to this topic
 will cause some additional processing time for calculating the normals.
 
+### /diagnostics
+[diagnostic_msgs/msg/DiagnosticArray](https://docs.ros2.org/latest/api/diagnostic_msgs/msg/DiagnosticArray.html)
+
+Added in Wilder Systems' fork. Every 10 seconds, with the camera connection check, the driver
+publishes a `zivid/temperature` status for the camera, with `hardware_id` `zivid`: the camera's
+device id on the robot, as in phoenix_diagnostics' `zivid/link` status (see "Naming" in
+phoenix_diagnostics' README). The camera's serial number is the `serial_number` value.
+It is published with transient local durability and is not published for a file camera.
+
+- The values are the camera's DMD, LED, lens, PCB and general temperatures in degrees Celsius
+  (`dmd_c`, `led_c`, `lens_c`, `pcb_c`, `general_c`), and the LED and DMD limits
+  (`led_limit_c`, `dmd_limit_c`). These are internal component temperatures, not the ambient
+  temperature.
+- The message gives the LED and DMD readings with their limits, e.g.
+  `LED 45 °C (limit 70 °C), DMD 38 °C (limit 60 °C)`.
+- ERROR when the LED is above 70 °C or the DMD is above 60 °C, e.g.
+  `LED 70.4 °C (limit 70 °C), DMD 50 °C (limit 60 °C); LED over its limit: the camera rejects captures`.
+  These are Zivid's limits: above them the camera's firmware rejects captures. See
+  [Monitoring Camera Temperature](https://support.zivid.com/en/latest/camera/reference-articles/monitoring-camera-temperature.html).
+- STALE while the camera is not connected, or when its state can't be read.
+- The message gives whole degrees, and a reading in it changes only once the camera's reading is
+  a full degree away from it. A recorder that stores each message change, such as Wilder's
+  diagnostics recorder, then stores a row per degree, not per 0.1 °C.
+
 ## Samples
 
 In the `zivid_samples` package we have added samples that demonstrate how to use
