@@ -685,14 +685,14 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
     publish_snr_img || publish_normals_xyz) {
     const auto color_space = colorSpace();
     const auto header = makeHeader();
-    auto point_cloud = frame.pointCloud();
-    ensureIdentityOrThrow(point_cloud.transformationMatrix());
+    ensureIdentityOrThrow(frame.pointCloud().transformationMatrix());
 
     // Transform point cloud from millimeters (Zivid SDK) to meter (ROS).
     const float scale = 0.001f;
     const auto transformation_matrix =
       Zivid::Matrix4x4{scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1};
-    point_cloud.transform(transformation_matrix);
+    // A copy: transform() would rescale the frame itself, and capture_and_save exports it after this.
+    const auto point_cloud = frame.pointCloud().transformed(transformation_matrix);
 
     if (publish_points_xyz) {
       publishPointCloudXYZ(header, point_cloud);
